@@ -317,9 +317,9 @@ function redirect_canonical( $requested_url = null, $do_redirect = true ) {
 				$paged = get_query_var('paged');
 				$redirect['query'] = remove_query_arg( 'paged', $redirect['query'] );
 				if ( !is_feed() ) {
-					if ( $paged > 1 && !is_single() ) {
+					if ( $paged > 1 && !is_singular() ) {
 						$addl_path = ( !empty( $addl_path ) ? trailingslashit($addl_path) : '' ) . user_trailingslashit("$wp_rewrite->pagination_base/$paged", 'paged');
-					} elseif ( !is_single() ) {
+					} elseif ( !is_singular() ) {
 						$addl_path = !empty( $addl_path ) ? trailingslashit($addl_path) : '';
 					}
 				} elseif ( $paged > 1 ) {
