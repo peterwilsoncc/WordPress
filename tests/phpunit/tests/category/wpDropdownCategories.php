@@ -5,31 +5,25 @@
  */
 class Tests_Category_WpDropdownCategories extends WP_UnitTestCase {
 	/**
-	 * @var Category ID used for tests requiring a single term only.
+	 * @var int Category ID used for tests requiring a single term only.
 	 */
 	static $cat_id;
 
 	/**
-	 * @var Three category IDs for tests requiring multiple terms.
+	 * @var array Three category IDs for tests requiring multiple terms.
 	 */
 	static $cats;
 
 	public static function wpSetUpBeforeClass( $factory ) {
-		// Create a test category.
-		self::$cats[0] = self::$cat_id = self::factory()->category->create( array(
-			'name' => 'Test Category',
-			'slug' => 'test_category',
-		) );
+		// Create test categories.
+		for( $i = 0; $i < 4; $i++ ) {
+			self::$cats[ $i ] = $factory->category->create( array(
+				'name' => 'Test Category ' . ( $i + 1 ),
+				'slug' => 'test_category_' . ( $i + 1 ),
+			) );
+		}
 
-		self::$cats[1] = self::factory()->category->create( array(
-			'name' => 'Test Category 2',
-			'slug' => 'test_category_2',
-		) );
-
-		self::$cats[2] = self::factory()->category->create( array(
-			'name' => 'Test Category 3',
-			'slug' => 'test_category_3',
-		) );
+		self::$cat_id = self::$cats[0];
 	}
 
 
@@ -74,7 +68,7 @@ class Tests_Category_WpDropdownCategories extends WP_UnitTestCase {
 		) );
 
 		// Test to see if it returns the default with the category slug.
-		$this->assertContains( 'value="test_category"', $found );
+		$this->assertContains( 'value="test_category_1"', $found );
 	}
 
 	/**

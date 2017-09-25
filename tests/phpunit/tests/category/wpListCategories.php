@@ -4,20 +4,49 @@
  * @group taxonomy
  */
 class Tests_Category_WpListCategories extends WP_UnitTestCase {
+	/**
+	 * @var array Category IDs.
+	 */
+	static $cats;
+
+	/**
+	 * @var array Children IDs.
+	 */
+	static $children;
+
+	public static function wpSetUpBeforeClass( $factory ) {
+		// Create test categories.
+		for( $i = 0; $i < 5; $i++ ) {
+			self::$cats[ $i ] = $factory->category->create( array(
+				'name' => 'Test Category ' . ( $i + 1 ),
+				'slug' => 'test_category_' . ( $i + 1 ),
+			) );
+		}
+
+		// Create child categories.
+		for( $i = 0; $i < 5; $i++ ) {
+			self::$children[ $i ] = $factory->category->create( array(
+				'name' => 'Child Category ' . ( $i + 1 ),
+				'slug' => 'child_category_' . ( $i + 1 ),
+				'parent' => self::$cats[ $i ],
+			) );
+		}
+	}
+
 	public function test_class() {
-		$c = self::factory()->category->create();
+		$c1 = self::$cats[0];
 
 		$found = wp_list_categories( array(
 			'hide_empty' => false,
 			'echo' => false,
 		) );
 
-		$this->assertContains( 'class="cat-item cat-item-' . $c . '"', $found );
+		$this->assertContains( 'class="cat-item cat-item-' . $c1 . '"', $found );
 	}
 
 	public function test_class_containing_current_cat() {
-		$c1 = self::factory()->category->create();
-		$c2 = self::factory()->category->create();
+		$c1 = self::$cats[0];
+		$c2 = self::$cats[1];
 
 		$found = wp_list_categories( array(
 			'hide_empty' => false,
@@ -30,10 +59,8 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	}
 
 	public function test_class_containing_current_cat_parent() {
-		$c1 = self::factory()->category->create();
-		$c2 = self::factory()->category->create( array(
-			'parent' => $c1,
-		) );
+		$c1 = self::$cats[0];
+		$c2 = self::$children[0];
 
 		$found = wp_list_categories( array(
 			'hide_empty' => false,
@@ -49,7 +76,7 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	 * @ticket 33565
 	 */
 	public function test_current_category_should_accept_an_array_of_ids() {
-		$cats = self::factory()->category->create_many( 3 );
+		$cats = self::$cats;
 
 		$found = wp_list_categories( array(
 			'echo' => false,
@@ -66,12 +93,8 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	 * @ticket 16792
 	 */
 	public function test_should_not_create_element_when_cat_name_is_filtered_to_empty_string() {
-		$c1 = self::factory()->category->create( array(
-			'name' => 'Test Cat 1',
-		) );
-		$c2 = self::factory()->category->create( array(
-			'name' => 'Test Cat 2',
-		) );
+		$c1 = self::$cats[0];
+		$c2 = self::$cats[1];
 
 		add_filter( 'list_cats', array( $this, 'list_cats_callback' ) );
 		$found = wp_list_categories( array(
@@ -81,15 +104,13 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 		remove_filter( 'list_cats', array( $this, 'list_cats_callback' ) );
 
 		$this->assertContains( "cat-item-$c2", $found );
-		$this->assertContains( 'Test Cat 2', $found );
+		$this->assertContains( 'Test Category 2', $found );
 
 		$this->assertNotContains( "cat-item-$c1", $found );
-		$this->assertNotContains( 'Test Cat 1', $found );
+		$this->assertNotContains( 'Test Category 1', $found );
 	}
 
 	public function test_show_option_all_link_should_go_to_home_page_when_show_on_front_is_false() {
-		$cats = self::factory()->category->create_many( 2 );
-
 		$found = wp_list_categories( array(
 			'echo' => false,
 			'show_option_all' => 'All',
@@ -101,7 +122,7 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	}
 
 	public function test_show_option_all_link_should_respect_page_for_posts() {
-		$cats = self::factory()->category->create_many( 2 );
+		$cats = self::$cats;
 		$p = self::factory()->post->create( array( 'post_type' => 'page' ) );
 
 		update_option( 'show_on_front', 'page' );
@@ -208,7 +229,7 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	}
 
 	public function list_cats_callback( $cat ) {
-		if ( 'Test Cat 1' === $cat ) {
+		if ( 'Test Category 1' === $cat ) {
 			return '';
 		}
 
@@ -254,7 +275,7 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	 * @ticket 33460
 	 */
 	public function test_hide_title_if_empty_should_be_ignored_when_category_list_is_not_empty() {
-		$cat = self::factory()->category->create();
+		$cat = self::$cats[0];
 
 		$found = wp_list_categories( array(
 			'echo' => false,
@@ -269,7 +290,7 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	 * @ticket 38839
 	 */
 	public function test_hide_title_if_empty_should_not_output_stray_closing_tags() {
-		$cat = self::factory()->category->create();
+		$cat = self::$cats[0];
 
 		$found = wp_list_categories( array(
 			'echo' => false,
@@ -285,9 +306,8 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	 * @ticket 12981
 	 */
 	public function test_exclude_tree_should_be_respected() {
-		$c = self::factory()->category->create();
-		$parent = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent' ) );
-		$child = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child', 'parent' => $parent ) );
+		$parent = self::$cats[0];
+		$child = self::$children[0];
 
 		$args = array( 'echo' => 0, 'hide_empty' => 0, 'exclude_tree' => $parent );
 
@@ -302,11 +322,10 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	 * @ticket 12981
 	 */
 	public function test_exclude_tree_should_be_merged_with_exclude() {
-		$c = self::factory()->category->create();
-		$parent = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent' ) );
-		$child = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child', 'parent' => $parent ) );
-		$parent2 = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent2' ) );
-		$child2 = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child2', 'parent' => $parent2 ) );
+		$parent = self::$cats[0];
+		$child = self::$children[0];
+		$parent2 = self::$cats[1];
+		$child2 = self::$children[1];
 
 		$args = array( 'echo' => 0, 'hide_empty' => 0, 'exclude_tree' => $parent );
 
@@ -328,15 +347,15 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	 * @ticket 35156
 	 */
 	public function test_comma_separated_exclude_tree_should_be_merged_with_exclude() {
-		$c = self::factory()->category->create();
-		$parent = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent' ) );
-		$child = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child', 'parent' => $parent ) );
-		$parent2 = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent2' ) );
-		$child2 = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child2', 'parent' => $parent2 ) );
-		$parent3 = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent3' ) );
-		$child3 = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child3', 'parent' => $parent3 ) );
-		$parent4 = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent4' ) );
-		$child4 = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child4', 'parent' => $parent4 ) );
+		$c = self::$cats[0];
+		$parent = self::$cats[1];
+		$child = self::$children[1];
+		$parent2 = self::$cats[2];
+		$child2 = self::$children[2];
+		$parent3 = self::$cats[3];
+		$child3 = self::$children[3];
+		$parent4 = self::$cats[4];
+		$child4 = self::$children[4];
 
 
 		$args = array( 'echo' => 0, 'hide_empty' => 0, 'exclude_tree' => $parent );
@@ -365,15 +384,15 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	 * @ticket 35156
 	 */
 	public function test_array_exclude_tree_should_be_merged_with_exclude() {
-		$c = self::factory()->category->create();
-		$parent = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent' ) );
-		$child = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child', 'parent' => $parent ) );
-		$parent2 = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent2' ) );
-		$child2 = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child2', 'parent' => $parent2 ) );
-		$parent3 = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent3' ) );
-		$child3 = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child3', 'parent' => $parent3 ) );
-		$parent4 = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent4' ) );
-		$child4 = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child4', 'parent' => $parent4 ) );
+		$c = self::$cats[0];
+		$parent = self::$cats[1];
+		$child = self::$children[1];
+		$parent2 = self::$cats[2];
+		$child2 = self::$children[2];
+		$parent3 = self::$cats[3];
+		$child3 = self::$children[3];
+		$parent4 = self::$cats[4];
+		$child4 = self::$children[4];
 
 
 		$args = array( 'echo' => 0, 'hide_empty' => 0, 'exclude_tree' => $parent );
@@ -402,8 +421,8 @@ class Tests_Category_WpListCategories extends WP_UnitTestCase {
 	 * @ticket 10676
 	 */
 	public function test_class_containing_current_cat_ancestor() {
-		$parent = self::factory()->category->create( array( 'name' => 'Parent', 'slug' => 'parent' ) );
-		$child = self::factory()->category->create( array( 'name' => 'Child', 'slug' => 'child', 'parent' => $parent ) );
+		$parent = self::$cats[0];
+		$child = self::$children[0];
 		$child2 = self::factory()->category->create( array( 'name' => 'Child 2', 'slug' => 'child2', 'parent' => $parent ) );
 		$grandchild = self::factory()->category->create( array( 'name' => 'Grand Child', 'slug' => 'child', 'parent' => $child ) );
 
