@@ -316,7 +316,10 @@ function wp_unschedule_hook( $hook ) {
 	 * If the results are empty (zero events to unschedule), no attempt
 	 * to update the cron array is required.
 	 */
-	if ( empty( $results ) || _set_cron_array( $crons ) ) {
+	if ( empty( $results ) ) {
+		return 0;
+	}
+	if ( _set_cron_array( $crons ) ) {
 		return array_sum( $results );
 	}
 	return false;
