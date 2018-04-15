@@ -230,7 +230,7 @@ class Tests_Cron extends WP_UnitTestCase {
 	}
 
 	function test_unschedule_undefined_hook() {
-		$hook = __FUNCTION__;
+		$hook           = __FUNCTION__;
 		$unrelated_hook = __FUNCTION__ . '_two';
 
 		// Attempt to clear schedule on non-existant hook.
