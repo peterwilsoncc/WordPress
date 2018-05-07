@@ -310,7 +310,7 @@ function wp_unschedule_event( $timestamp, $hook, $args = array() ) {
 	 * process, causing the function to return the filtered value instead.
 	 *
 	 * For plugins replacing wp-cron, return true if the event was successfully
-	 * rescheduled, false if not.
+	 * unscheduled, false if not.
 	 *
 	 * @since 5.0.0
 	 *
