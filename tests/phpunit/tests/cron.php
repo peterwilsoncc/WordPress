@@ -11,11 +11,17 @@ class Tests_Cron extends WP_UnitTestCase {
 	 */
 	private $preflight_cron_array;
 
+	/**
+	 * @var int Timestamp of now() + 30 minutes;
+	 */
+	private $plus_thirty_minutes;
+
 	function setUp() {
 		parent::setUp();
 		// make sure the schedule is clear
 		_set_cron_array( array() );
 		$this->preflight_cron_array = array();
+		$this->plus_thirty_minutes = strtotime( '+30 minutes' );
 	}
 
 	function tearDown() {
@@ -442,5 +448,38 @@ class Tests_Cron extends WP_UnitTestCase {
 
 		// Check cron option is unchanged.
 		$this->assertSame( $expected, _get_cron_array() );
+	}
+
+	/**
+	 * Ensure the preflight hooks for scheduled events
+	 * return a filtered value as expected.
+	 *
+	 * @ticket 32656
+	 */
+	function test_pre_scheduled_event_hooks() {
+		add_filter( 'pre_get_scheduled_event', array( $this, 'filter_pre_scheduled_event_hooks' ) );
+		add_filter( 'pre_next_scheduled', array( $this, 'filter_pre_scheduled_event_hooks' ) );
+
+		$actual = wp_get_scheduled_event( 'preflight_event', array(), $this->plus_thirty_minutes );
+		$actual2 = wp_next_scheduled( 'preflight_event', array() );
+
+		$expected = (object) array(
+			'hook'      => 'preflight_event',
+			'timestamp' => $this->plus_thirty_minutes,
+			'schedule'  => false,
+			'args'      => array(),
+		);
+
+		$this->assertEquals( $expected, $actual );
+		$this->assertEquals( $expected, $actual2 );
+	}
+
+	function filter_pre_scheduled_event_hooks() {
+		return (object) array(
+			'hook'      => 'preflight_event',
+			'timestamp' => $this->plus_thirty_minutes,
+			'schedule'  => false,
+			'args'      => array(),
+		);
 	}
 }
