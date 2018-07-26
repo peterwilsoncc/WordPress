@@ -1315,28 +1315,14 @@ ul.cat-checklist {
 
 .plugin-card .updating-message:before {
 	content: "\f463";
-	-webkit-animation: rotation 2s infinite linear;
 	animation: rotation 2s infinite linear;
-}
-
-@-webkit-keyframes rotation {
-	0% {
-		-webkit-transform: rotate(0deg);
-		transform: rotate(0deg);
-	}
-	100% {
-		-webkit-transform: rotate(359deg);
-		transform: rotate(359deg);
-	}
 }
 
 @keyframes rotation {
 	0% {
-		-webkit-transform: rotate(0deg);
 		transform: rotate(0deg);
 	}
 	100% {
-		-webkit-transform: rotate(359deg);
 		transform: rotate(359deg);
 	}
 }
@@ -1526,6 +1512,10 @@ div.action-links,
 
 .plugin-card .compatibility-compatible:before {
 	content: "\f147";
+}
+
+.plugin-card .notice {
+	margin: 20px 20px 0 20px;
 }
 
 .plugin-icon {

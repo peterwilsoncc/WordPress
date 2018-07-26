@@ -74,7 +74,8 @@ function current_time( $type, $gmt = 0 ) {
 }
 
 /**
- * Retrieve the date in localized format, based on timestamp.
+ * Retrieve the date in localized format, based on a sum of Unix timestamp and
+ * timezone offset in seconds.
  *
  * If the locale specifies the locale month and weekday, then the locale will
  * take over the format for the date. If it isn't, then the date format string
@@ -84,15 +85,17 @@ function current_time( $type, $gmt = 0 ) {
  *
  * @global WP_Locale $wp_locale
  *
- * @param string   $dateformatstring Format to display the date.
- * @param bool|int $unixtimestamp    Optional. Unix timestamp. Default false.
- * @param bool     $gmt              Optional. Whether to use GMT timezone. Default false.
+ * @param string   $dateformatstring      Format to display the date.
+ * @param int|bool $timestamp_with_offset Optional. A sum of Unix timestamp and timezone offset in seconds.
+ *                                        Default false.
+ * @param bool     $gmt                   Optional. Whether to use GMT timezone. Only applies if timestamp is
+ *                                        not provided. Default false.
  *
  * @return string The date, translated if locale specifies it.
  */
-function date_i18n( $dateformatstring, $unixtimestamp = false, $gmt = false ) {
+function date_i18n( $dateformatstring, $timestamp_with_offset = false, $gmt = false ) {
 	global $wp_locale;
-	$i = $unixtimestamp;
+	$i = $timestamp_with_offset;
 
 	if ( false === $i ) {
 		$i = current_time( 'timestamp', $gmt );
@@ -103,6 +106,9 @@ function date_i18n( $dateformatstring, $unixtimestamp = false, $gmt = false ) {
 	 * See https://core.trac.wordpress.org/ticket/9396
 	 */
 	$req_format = $dateformatstring;
+
+	$dateformatstring = preg_replace( "/(?<!\\\\)c/", DATE_W3C, $dateformatstring );
+	$dateformatstring = preg_replace( "/(?<!\\\\)r/", DATE_RFC2822, $dateformatstring );
 
 	if ( ( ! empty( $wp_locale->month ) ) && ( ! empty( $wp_locale->weekday ) ) ) {
 		$datemonth            = $wp_locale->get_month( date( 'm', $i ) );
@@ -125,6 +131,9 @@ function date_i18n( $dateformatstring, $unixtimestamp = false, $gmt = false ) {
 	$timezone_formats_re = implode( '|', $timezone_formats );
 	if ( preg_match( "/$timezone_formats_re/", $dateformatstring ) ) {
 		$timezone_string = get_option( 'timezone_string' );
+		if ( false === $timestamp_with_offset && $gmt ) {
+			$timezone_string = 'UTC';
+		}
 		if ( $timezone_string ) {
 			$timezone_object = timezone_open( $timezone_string );
 			$date_object     = date_create( null, $timezone_object );
@@ -134,6 +143,36 @@ function date_i18n( $dateformatstring, $unixtimestamp = false, $gmt = false ) {
 					$dateformatstring = ' ' . $dateformatstring;
 					$dateformatstring = preg_replace( "/([^\\\])$timezone_format/", "\\1" . backslashit( $formatted ), $dateformatstring );
 					$dateformatstring = substr( $dateformatstring, 1, strlen( $dateformatstring ) - 1 );
+				}
+			}
+		} else {
+			$offset = get_option( 'gmt_offset' );
+			foreach ( $timezone_formats as $timezone_format ) {
+				if ( 'I' === $timezone_format ) {
+					continue;
+				}
+
+				if ( false !== strpos( $dateformatstring, $timezone_format ) ) {
+					if ( 'Z' === $timezone_format ) {
+						$formatted = (string) ( $offset * HOUR_IN_SECONDS );
+					} else {
+						$prefix    = '';
+						$hours     = (int) $offset;
+						$separator = '';
+						$minutes   = abs( ( $offset - $hours ) * 60 );
+
+						if ( 'T' === $timezone_format ) {
+							$prefix = 'GMT';
+						} elseif ( 'e' === $timezone_format || 'P' === $timezone_format ) {
+							$separator = ':';
+						}
+
+						$formatted = sprintf( '%s%+03d%s%02d', $prefix, $hours, $separator, $minutes );
+					}
+
+					$dateformatstring = ' ' . $dateformatstring;
+					$dateformatstring = preg_replace( "/([^\\\])$timezone_format/", "\\1" . backslashit( $formatted ), $dateformatstring );
+					$dateformatstring = substr( $dateformatstring, 1 );
 				}
 			}
 		}
@@ -147,8 +186,9 @@ function date_i18n( $dateformatstring, $unixtimestamp = false, $gmt = false ) {
 	 *
 	 * @param string $j          Formatted date string.
 	 * @param string $req_format Format to display the date.
-	 * @param int    $i          Unix timestamp.
-	 * @param bool   $gmt        Whether to convert to GMT for time. Default false.
+	 * @param int    $i          A sum of Unix timestamp and timezone offset in seconds.
+	 * @param bool   $gmt        Whether to use GMT timezone. Only applies if timestamp was
+	 *                           not provided. Default false.
 	 */
 	$j = apply_filters( 'date_i18n', $j, $req_format, $i, $gmt );
 	return $j;
@@ -1772,7 +1812,7 @@ function path_join( $base, $path ) {
  * @since 3.9.0
  * @since 4.4.0 Ensures upper-case drive letters on Windows systems.
  * @since 4.5.0 Allows for Windows network shares.
- * @since 5.0.0 Allows for PHP file wrappers.
+ * @since 4.9.7 Allows for PHP file wrappers.
  *
  * @param string $path Path to normalize.
  * @return string Normalized path.
@@ -5513,6 +5553,11 @@ function _device_can_upload() {
  * @return bool True if the path is a stream URL.
  */
 function wp_is_stream( $path ) {
+	if ( false === strpos( $path, '://' ) ) {
+		// $path isn't a stream
+		return false;
+	}
+
 	$wrappers    = stream_get_wrappers();
 	$wrappers    = array_map( 'preg_quote', $wrappers );
 	$wrappers_re = '(' . join( '|', $wrappers ) . ')';
@@ -5811,6 +5856,28 @@ function wp_delete_file( $file ) {
 }
 
 /**
+ * Deletes a file if its path is within the given directory.
+ *
+ * @since 4.9.7
+ *
+ * @param string $file      Absolute path to the file to delete.
+ * @param string $directory Absolute path to a directory.
+ * @return bool True on success, false on failure.
+ */
+function wp_delete_file_from_directory( $file, $directory ) {
+	$real_file = realpath( wp_normalize_path( $file ) );
+	$real_directory = realpath( wp_normalize_path( $directory ) );
+
+	if ( false === $real_file || false === $real_directory || strpos( wp_normalize_path( $real_file ), trailingslashit( wp_normalize_path( $real_directory ) ) ) !== 0 ) {
+		return false;
+	}
+
+	wp_delete_file( $file );
+
+	return true;
+}
+
+/**
  * Outputs a small JS snippet on preview tabs/windows to remove `window.name` on unload.
  *
  * This prevents reusing the same tab for a preview when the user has navigated away.
@@ -5847,21 +5914,21 @@ function wp_post_preview_js() {
 }
 
 /**
- * Parses and formats a MySQL datetime (Y-m-d H:i:s) for ISO8601/RFC3339.
+ * Parses and formats a MySQL datetime (Y-m-d H:i:s) for ISO8601 (Y-m-d\TH:i:s).
  *
  * Explicitly strips timezones, as datetimes are not saved with any timezone
  * information. Including any information on the offset could be misleading.
  *
+ * Despite historical function name, the output does not conform to RFC3339 format,
+ * which must contain timezone.
+ *
  * @since 4.4.0
  *
  * @param string $date_string Date string to parse and format.
- * @return string Date formatted for ISO8601/RFC3339.
+ * @return string Date formatted for ISO8601 without time zone.
  */
 function mysql_to_rfc3339( $date_string ) {
-	$formatted = mysql2date( 'c', $date_string, false );
-
-	// Strip timezone information
-	return preg_replace( '/(?:Z|[+-]\d{2}(?::\d{2})?)$/', '', $formatted );
+	return mysql2date( 'Y-m-d\TH:i:s', $date_string, false );
 }
 
 /**
@@ -6249,13 +6316,49 @@ function wp_privacy_anonymize_data( $type, $data = '' ) {
 }
 
 /**
- * Trigger the check for policy text changes.
+ * Returns the directory used to store personal data export files.
  *
  * @since 4.9.6
- * @access private
+ *
+ * @see wp_privacy_exports_url
+ *
+ * @return string Exports directory.
  */
-function _wp_privacy_active_plugins_change() {
-	update_option( '_wp_privacy_text_change_check', 'check' );
+function wp_privacy_exports_dir() {
+	$upload_dir  = wp_upload_dir();
+	$exports_dir = trailingslashit( $upload_dir['basedir'] ) . 'wp-personal-data-exports/';
+
+	/**
+	 * Filters the directory used to store personal data export files.
+	 *
+	 * @since 4.9.6
+	 *
+	 * @param string $exports_dir Exports directory.
+	 */
+	return apply_filters( 'wp_privacy_exports_dir', $exports_dir );
+}
+
+/**
+ * Returns the URL of the directory used to store personal data export files.
+ *
+ * @since 4.9.6
+ *
+ * @see wp_privacy_exports_dir
+ *
+ * @return string Exports directory URL.
+ */
+function wp_privacy_exports_url() {
+	$upload_dir  = wp_upload_dir();
+	$exports_url = trailingslashit( $upload_dir['baseurl'] ) . 'wp-personal-data-exports/';
+
+	/**
+	 * Filters the URL of the directory used to store personal data export files.
+	 *
+	 * @since 4.9.6
+	 *
+	 * @param string $exports_url Exports directory URL.
+	 */
+	return apply_filters( 'wp_privacy_exports_url', $exports_url );
 }
 
 /**
@@ -6287,8 +6390,7 @@ function wp_schedule_delete_old_privacy_export_files() {
 function wp_privacy_delete_old_export_files() {
 	require_once( ABSPATH . 'wp-admin/includes/file.php' );
 
-	$upload_dir   = wp_upload_dir();
-	$exports_dir  = trailingslashit( $upload_dir['basedir'] . '/exports' );
+	$exports_dir  = wp_privacy_exports_dir();
 	$export_files = list_files( $exports_dir, 100, array( 'index.html' ) );
 
 	/**

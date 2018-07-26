@@ -810,27 +810,27 @@ function get_term( $term, $taxonomy = '', $output = OBJECT, $filter = 'raw' ) {
 	}
 
 	/**
-	 * Filters a term.
+	 * Filters a taxonomy term object.
 	 *
 	 * @since 2.3.0
-	 * @since 4.4.0 `$_term` can now also be a WP_Term object.
+	 * @since 4.4.0 `$_term` is now a `WP_Term` object.
 	 *
-	 * @param int|WP_Term $_term    Term object or ID.
-	 * @param string      $taxonomy The taxonomy slug.
+	 * @param WP_Term $_term    Term object.
+	 * @param string  $taxonomy The taxonomy slug.
 	 */
 	$_term = apply_filters( 'get_term', $_term, $taxonomy );
 
 	/**
-	 * Filters a taxonomy.
+	 * Filters a taxonomy term object.
 	 *
 	 * The dynamic portion of the filter name, `$taxonomy`, refers
-	 * to the taxonomy slug.
+	 * to the slug of the term's taxonomy.
 	 *
 	 * @since 2.3.0
-	 * @since 4.4.0 `$_term` can now also be a WP_Term object.
+	 * @since 4.4.0 `$_term` is now a `WP_Term` object.
 	 *
-	 * @param int|WP_Term $_term    Term object or ID.
-	 * @param string      $taxonomy The taxonomy slug.
+	 * @param WP_Term $_term    Term object.
+	 * @param string  $taxonomy The taxonomy slug.
 	 */
 	$_term = apply_filters( "get_{$taxonomy}", $_term, $taxonomy );
 
@@ -1320,6 +1320,39 @@ function has_term_meta( $term_id ) {
 	global $wpdb;
 
 	return $wpdb->get_results( $wpdb->prepare( "SELECT meta_key, meta_value, meta_id, term_id FROM $wpdb->termmeta WHERE term_id = %d ORDER BY meta_key,meta_id", $term_id ), ARRAY_A );
+}
+
+/**
+ * Registers a meta key for terms.
+ *
+ * @since 4.9.8
+ *
+ * @param string $taxonomy Taxonomy to register a meta key for. Pass an empty string
+ *                         to register the meta key across all existing taxonomies.
+ * @param string $meta_key The meta key to register.
+ * @param array  $args     Data used to describe the meta key when registered. See
+ *                         {@see register_meta()} for a list of supported arguments.
+ * @return bool True if the meta key was successfully registered, false if not.
+ */
+function register_term_meta( $taxonomy, $meta_key, array $args ) {
+	$args['object_subtype'] = $taxonomy;
+
+	return register_meta( 'term', $meta_key, $args );
+}
+
+/**
+ * Unregisters a meta key for terms.
+ *
+ * @since 4.9.8
+ *
+ * @param string $taxonomy Taxonomy the meta key is currently registered for. Pass
+ *                         an empty string if the meta key is registered across all
+ *                         existing taxonomies.
+ * @param string $meta_key The meta key to unregister.
+ * @return bool True on success, false if the meta key was not previously registered.
+ */
+function unregister_term_meta( $taxonomy, $meta_key ) {
+	return unregister_meta_key( 'term', $meta_key, $taxonomy );
 }
 
 /**
@@ -4514,4 +4547,23 @@ function wp_check_term_hierarchy_for_loops( $parent, $term_id, $taxonomy ) {
 	}
 
 	return $parent;
+}
+
+/**
+ * Determines whether a taxonomy is considered "viewable".
+ *
+ * @since 5.0.0
+ *
+ * @param string|WP_Taxonomy $taxonomy Taxonomy name or object.
+ * @return bool Whether the taxonomy should be considered viewable.
+ */
+function is_taxonomy_viewable( $taxonomy ) {
+	if ( is_scalar( $taxonomy ) ) {
+		$taxonomy = get_taxonomy( $taxonomy );
+		if ( ! $taxonomy ) {
+			return false;
+		}
+	}
+
+	return $taxonomy->publicly_queryable;
 }

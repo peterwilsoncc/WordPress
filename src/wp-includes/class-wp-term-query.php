@@ -123,8 +123,8 @@ class WP_Term_Query {
 	 *     @type int          $offset                 The number by which to offset the terms query. Default empty.
 	 *     @type string       $fields                 Term fields to query for. Accepts 'all' (returns an array of
 	 *                                                complete term objects), 'all_with_object_id' (returns an
-	 *                                                array of term objects with the 'object_id' param; only works
-	 *                                                when the `$fields` parameter is 'object_ids' ), 'ids'
+	 *                                                array of term objects with the 'object_id' param; works only
+	 *                                                when the `$object_ids` parameter is populated), 'ids'
 	 *                                                (returns an array of ids), 'tt_ids' (returns an array of
 	 *                                                term taxonomy ids), 'id=>parent' (returns an associative
 	 *                                                array with ids as keys, parent term IDs as values), 'names'
@@ -677,7 +677,7 @@ class WP_Term_Query {
 		$cache_key    = "get_terms:$key:$last_changed";
 		$cache        = wp_cache_get( $cache_key, 'terms' );
 		if ( false !== $cache ) {
-			if ( 'all' === $_fields ) {
+			if ( 'all' === $_fields || 'all_with_object_id' === $_fields ) {
 				$cache = $this->populate_terms( $cache );
 			}
 
@@ -978,7 +978,7 @@ class WP_Term_Query {
 	 *
 	 * Also discards invalid term objects.
 	 *
-	 * @since 5.0.0
+	 * @since 4.9.8
 	 *
 	 * @param array $term_ids Term IDs.
 	 * @return array
