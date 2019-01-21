@@ -288,14 +288,10 @@ function create_initial_post_types() {
 			'rest_controller_class' => 'WP_REST_Blocks_Controller',
 			'capability_type'       => 'block',
 			'capabilities'          => array(
-				// You need to be able to edit posts, in order to read blocks in their raw form.
-				'read'                   => 'edit_posts',
+				// You need to be able to edit blocks, in order to read blocks in their raw form.
+				'read'                   => 'edit_blocks',
 				// You need to be able to publish posts, in order to create blocks.
-				'create_posts'           => 'publish_posts',
-				'edit_published_posts'   => 'edit_published_posts',
-				'delete_published_posts' => 'delete_published_posts',
-				'edit_others_posts'      => 'edit_others_posts',
-				'delete_others_posts'    => 'delete_others_posts',
+				'create_posts'           => 'publish_blocks',
 			),
 			'map_meta_cap'          => true,
 			'supports'              => array(

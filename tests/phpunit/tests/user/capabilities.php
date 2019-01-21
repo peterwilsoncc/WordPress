@@ -130,6 +130,18 @@ class Tests_User_Capabilities extends WP_UnitTestCase {
 
 			'read'                   => array( 'administrator', 'editor', 'author', 'contributor', 'subscriber' ),
 
+			'edit_blocks'             => array( 'administrator', 'editor', 'author', 'contributor' ),
+			'edit_others_blocks'      => array( 'administrator', 'editor' ),
+			'publish_blocks'          => array( 'administrator', 'editor', 'author' ),
+			'read_private_blocks'     => array( 'administrator', 'editor' ),
+			'delete_blocks'           => array( 'administrator', 'editor', 'author', 'contributor' ),
+			'delete_private_blocks'   => array( 'administrator', 'editor' ),
+			'delete_published_blocks' => array( 'administrator', 'editor', 'author' ),
+			'delete_others_blocks'    => array( 'administrator', 'editor' ),
+			'edit_private_blocks'     => array( 'administrator', 'editor' ),
+			'edit_published_blocks'   => array( 'administrator', 'editor', 'author' ),
+			'create_blocks'           => array( 'administrator', 'editor', 'author', 'contributor' ),
+
 			'level_10'               => array( 'administrator' ),
 			'level_9'                => array( 'administrator' ),
 			'level_8'                => array( 'administrator' ),
@@ -2129,15 +2141,15 @@ class Tests_User_Capabilities extends WP_UnitTestCase {
 
 	function data_block_caps() {
 		$post_caps = array(
-			'edit_block',
-			'read_block',
-			'delete_block',
+			'edit_post',
+			'read_post',
+			'delete_post',
 		);
 
 		$all_caps = array(
-			'edit_block',
-			'read_block',
-			'delete_block',
+			'edit_post',
+			'read_post',
+			'delete_post',
 			'edit_blocks',
 			'edit_others_blocks',
 			'publish_blocks',
@@ -2154,7 +2166,7 @@ class Tests_User_Capabilities extends WP_UnitTestCase {
 			'administrator' => $all_caps,
 			'editor'        => $all_caps,
 			'author'        => array(
-				'read_block',
+				'read_post',
 				'edit_blocks',
 				'publish_blocks',
 				'delete_blocks',
@@ -2162,7 +2174,7 @@ class Tests_User_Capabilities extends WP_UnitTestCase {
 				'edit_published_blocks',
 			),
 			'contributor'   => array(
-				'read_block',
+				'read_post',
 				'edit_blocks',
 				'delete_blocks',
 			),
