@@ -289,9 +289,9 @@ function create_initial_post_types() {
 			'capability_type'       => 'block',
 			'capabilities'          => array(
 				// You need to be able to edit blocks, in order to read blocks in their raw form.
-				'read'                   => 'edit_blocks',
+				'read'         => 'edit_blocks',
 				// You need to be able to publish posts, in order to create blocks.
-				'create_posts'           => 'publish_blocks',
+				'create_posts' => 'publish_blocks',
 			),
 			'map_meta_cap'          => true,
 			'supports'              => array(
