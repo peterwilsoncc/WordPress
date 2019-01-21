@@ -947,7 +947,6 @@ function populate_roles_300() {
  */
 function populate_roles_510() {
 	$high_privileged_caps = array(
-		'read_blocks',
 		'edit_blocks',
 		'edit_others_blocks',
 		'publish_blocks',
@@ -958,7 +957,6 @@ function populate_roles_510() {
 		'delete_others_blocks',
 		'edit_private_blocks',
 		'edit_published_blocks',
-		'create_blocks',
 	);
 
 	$caps_map = array(
