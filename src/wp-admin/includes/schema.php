@@ -698,6 +698,7 @@ function populate_roles() {
 	populate_roles_270();
 	populate_roles_280();
 	populate_roles_300();
+	populate_roles_510();
 }
 
 /**
@@ -936,6 +937,60 @@ function populate_roles_300() {
 		$role->add_cap( 'edit_theme_options' );
 		$role->add_cap( 'delete_themes' );
 		$role->add_cap( 'export' );
+	}
+}
+
+/**
+ * Create and modify WordPress roles for WordPress 5.1.
+ *
+ * @since 5.1.0
+ */
+function populate_roles_510() {
+	$high_privileged_caps = array(
+		'edit_blocks',
+		'edit_others_blocks',
+		'publish_blocks',
+		'read_private_blocks',
+		'delete_blocks',
+		'delete_private_blocks',
+		'delete_published_blocks',
+		'delete_others_blocks',
+		'edit_private_blocks',
+		'edit_published_blocks',
+	);
+
+	$caps_map = array(
+		'administrator' => $high_privileged_caps,
+		'editor'        => $high_privileged_caps,
+		'author'        => array(
+			'edit_blocks',
+			'publish_blocks',
+			'delete_blocks',
+			'delete_published_blocks',
+			'edit_published_blocks',
+		),
+		'contributor'   => array(
+			'edit_blocks',
+			'delete_blocks',
+		),
+	);
+
+	foreach ( $caps_map as $role_name => $caps ) {
+		$role = get_role( $role_name );
+
+		if ( empty( $role ) ) {
+			continue;
+		}
+
+		/*
+		 * Due to roles being created in the block editor feature plugin,
+		 * `$role->has_cap( $cap )` needs to run before adding the role.
+		 */
+		foreach ( $caps as $cap ) {
+			if ( ! $role->has_cap( $cap ) ) {
+				$role->add_cap( $cap );
+			}
+		}
 	}
 }
 

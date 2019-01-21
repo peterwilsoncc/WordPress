@@ -815,6 +815,10 @@ function upgrade_all() {
 		upgrade_500();
 	}
 
+	if ( $wp_current_db_version < 44658 ) {
+		upgrade_510();
+	}
+
 	maybe_disable_link_manager();
 
 	maybe_disable_automattic_widgets();
@@ -2115,6 +2119,21 @@ function upgrade_500() {
 		}
 
 		deactivate_plugins( array( 'gutenberg/gutenberg.php' ), true );
+	}
+}
+
+/**
+ * Executes changes made in WordPress 5.1.0.
+ *
+ * @ignore
+ * @since 5.1.0
+ *
+ * @global int $wp_current_db_version Current database version.
+ */
+function upgrade_510() {
+	global $wp_current_db_version;
+	if ( $wp_current_db_version < 44658 ) {
+		populate_roles_510();
 	}
 }
 
